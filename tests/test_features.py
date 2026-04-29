@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from features.transformers import DomainFeatureGenerator
+from src.features.transformers import DomainFeatureGenerator
 
 def test_domain_feature_generator():
     """Tests the custom transformer for correct calculations and NaN handling."""
