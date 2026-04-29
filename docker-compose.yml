@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: credit-risk-api
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mlflow:
+    image: python:3.10-slim
+    container_name: credit-risk-mlflow
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "5000:5000"
+    command: >
+      bash -c "pip install mlflow && mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5000"
+
+  monitoring:
+    image: python:3.10-slim
+    container_name: credit-risk-monitoring
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "8501:8501"
+    command: >
+      bash -c "pip install streamlit evidently pandas && streamlit run monitoring/app.py --server.port 8501 --server.address 0.0.0.0"
