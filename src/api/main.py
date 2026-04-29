@@ -66,7 +66,9 @@ async def lifespan(app: FastAPI):
         except OSError:
             # In Docker, the MLflow DB may contain hardcoded Windows artifact paths
             # that don't resolve on Linux. Catch the OSError and load from the local path.
-            logger.info("Registry path failed (likely hardcoded). Attempting local artifact fallback...")
+            logger.info(
+                "Registry path failed (likely hardcoded). Attempting local artifact fallback..."
+            )
             # The model source in the registry is like "models:/m-<hash>"
             # which maps to mlruns/<exp_id>/models/<model_hash>/artifacts/
             model_source = model_metadata.source
