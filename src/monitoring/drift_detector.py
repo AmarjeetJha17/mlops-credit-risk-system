@@ -4,7 +4,7 @@ import os
 import requests
 import logging
 from datetime import datetime
-from evidently.report import Report
+from evidently.report.report import Report
 from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
 
 # Set up logging
