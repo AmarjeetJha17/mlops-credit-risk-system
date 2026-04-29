@@ -37,7 +37,7 @@ jobs:
       - name: Run Pytest (Data & Model Validation)
         # Assumes you have written tests checking your model's AUC threshold
         run: |
-          pytest tests/ -v
+          python -m pytest tests/ -v
 
   build-and-push:
     name: Build & Push Docker Image
