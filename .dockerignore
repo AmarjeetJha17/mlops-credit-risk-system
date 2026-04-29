@@ -1,0 +1,22 @@
+# Git and Environments
+.git/
+.github/
+venv/
+.env
+
+# Python Caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Raw and Processed Data (NEVER put big data in an API container)
+data/
+!data/.keep
+
+# Jupyter Notebooks and Reports
+notebooks/
+reports/
+
+# Tests (Not needed in the production image)
+tests/

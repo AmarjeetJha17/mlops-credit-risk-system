@@ -1,0 +1,24 @@
+# Environments
+venv/
+.env
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Data and Models (NEVER commit large raw data or local models)
+data/raw/*
+data/processed/*
+!data/.keep
+models/*
+!models/.keep
+mlruns/
+mlflow.db
+
+# Logs and Reports
+logs/
+reports/figures/*
+!reports/figures/.keep
+reports/stats/*
+!reports/stats/.keep
