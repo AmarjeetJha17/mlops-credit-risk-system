@@ -61,10 +61,13 @@ async def lifespan(app: FastAPI):
         }
 
         # Load the underlying scikit-learn/LightGBM model (better for SHAP support)
-        # In Docker, the MLflow DB may contain hardcoded Windows artifact paths
-        # that don't resolve on Linux. Detect this and load from the local path.
-        is_docker = os.path.exists("/.dockerenv")
-        if is_docker:
+        model_uri = f"models:/{model_name}/{stage}"
+        try:
+            assets["model"] = mlflow.sklearn.load_model(model_uri)
+        except OSError:
+            # In Docker, the MLflow DB may contain hardcoded Windows artifact paths
+            # that don't resolve on Linux. Catch the OSError and load from the local path.
+            logger.info("Registry path failed (likely hardcoded). Attempting local artifact fallback...")
             # The model source in the registry is like "models:/m-<hash>"
             # which maps to mlruns/<exp_id>/models/<model_hash>/artifacts/
             model_source = model_metadata.source
@@ -75,13 +78,8 @@ async def lifespan(app: FastAPI):
             # Extract model hash from source (format: "models:/m-<hash>")
             model_hash = model_source.split("/")[-1]
             local_model_path = f"mlruns/{exp_id}/models/{model_hash}/artifacts"
-            logger.info(
-                f"Docker detected: loading model from local path: {local_model_path}"
-            )
+            logger.info(f"Loading model from local path: {local_model_path}")
             assets["model"] = mlflow.sklearn.load_model(local_model_path)
-        else:
-            model_uri = f"models:/{model_name}/{stage}"
-            assets["model"] = mlflow.sklearn.load_model(model_uri)
 
         # Initialize SHAP explainer
         logger.info("Initializing SHAP explainer...")
