@@ -2,13 +2,13 @@ name: MLOps CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: amarjeetjha17/mlops-credit-risk-system
 
 jobs:
   test:
@@ -43,7 +43,7 @@ jobs:
     name: Build & Push Docker Image
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     permissions:
       contents: read
       packages: write
@@ -80,7 +80,7 @@ jobs:
     name: Deploy to Render
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
       - name: Trigger Render Deployment Hook
