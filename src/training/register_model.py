@@ -3,12 +3,15 @@ from mlflow.tracking import MlflowClient
 import logging
 from datetime import datetime
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # Set tracking URI to our local SQLite DB
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
 MODEL_NAME = "CreditRiskModel"
 AUC_THRESHOLD = 0.7500
+
 
 def get_best_run(client: MlflowClient, experiment_name: str):
     """Finds the run with the highest cross-validated ROC-AUC."""
@@ -19,17 +22,20 @@ def get_best_run(client: MlflowClient, experiment_name: str):
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id],
         order_by=["metrics.cv_mean_roc_auc DESC"],
-        max_results=1
+        max_results=1,
     )
     return runs[0] if runs else None
 
+
 def validate_and_promote():
     client = MlflowClient()
-    
+
     # 1. Find the best model from our baseline or tuning experiments
     logging.info("Searching for the best model run...")
-    best_run = get_best_run(client, "credit-risk-baselines") # Or 'credit-risk-optuna-tuning'
-    
+    best_run = get_best_run(
+        client, "credit-risk-baselines"
+    )  # Or 'credit-risk-optuna-tuning'
+
     if not best_run:
         logging.error("No runs found.")
         return
@@ -42,9 +48,11 @@ def validate_and_promote():
 
     # 2. Validation Step: Does it pass our business threshold?
     if best_auc < AUC_THRESHOLD:
-        logging.warning(f"Model AUC {best_auc:.4f} is below threshold {AUC_THRESHOLD}. Aborting promotion.")
+        logging.warning(
+            f"Model AUC {best_auc:.4f} is below threshold {AUC_THRESHOLD}. Aborting promotion."
+        )
         return
-        
+
     logging.info("Model passed validation. Proceeding to registration.")
 
     # 3. Register the Model
@@ -55,25 +63,29 @@ def validate_and_promote():
 
     # 4. Add Rich Metadata/Tags
     client.set_registered_model_tag(MODEL_NAME, "dataset", "HomeCredit_v1")
-    client.set_model_version_tag(MODEL_NAME, version_num, "training_date", datetime.now().strftime("%Y-%m-%d"))
+    client.set_model_version_tag(
+        MODEL_NAME, version_num, "training_date", datetime.now().strftime("%Y-%m-%d")
+    )
     client.set_model_version_tag(MODEL_NAME, version_num, "roc_auc", str(best_auc))
     client.set_model_version_tag(MODEL_NAME, version_num, "model_type", model_type)
-    
+
     # Optional: Log features used if tracked in params
     client.set_model_version_tag(MODEL_NAME, version_num, "features", "top_50_shap")
 
     # 5. Manage Lifecycle: Staging -> Production Workflow
     logging.info("Managing Staging/Production lifecycle...")
-    
+
     # Find the current Production model and demote it to Staging
     prod_versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
     for prod_model in prod_versions:
-        logging.info(f"Demoting Version {prod_model.version} from Production to Staging.")
+        logging.info(
+            f"Demoting Version {prod_model.version} from Production to Staging."
+        )
         client.transition_model_version_stage(
             name=MODEL_NAME,
             version=prod_model.version,
             stage="Staging",
-            archive_existing_versions=False
+            archive_existing_versions=False,
         )
 
     # Promote the new model to Production
@@ -82,10 +94,11 @@ def validate_and_promote():
         name=MODEL_NAME,
         version=version_num,
         stage="Production",
-        archive_existing_versions=False
+        archive_existing_versions=False,
     )
-    
+
     logging.info("Model registry updated successfully.")
+
 
 if __name__ == "__main__":
     validate_and_promote()
