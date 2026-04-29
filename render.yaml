@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: credit-risk-api
+    env: docker
+    plan: free
+    region: oregon # Or frankfurt/ohio depending on your location
+    image: ghcr.io/AmarjeetJha17/mlops-credit-risk-system:latest
+    envVars:
+      - key: PORT
+        value: "8000"
