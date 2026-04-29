@@ -1,0 +1,23 @@
+artifact_path: file:D:/Amarjeet/Projects/mlops-credit-risk-system/mlruns/1/models/m-7d7cb5b3a19d4d61b5680110683296cd/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.7
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.11.1
+model_id: m-7d7cb5b3a19d4d61b5680110683296cd
+model_size_bytes: 11515855
+model_uuid: m-7d7cb5b3a19d4d61b5680110683296cd
+prompts: null
+run_id: 55b4357f83084161a2aa3d3024392e80
+utc_time_created: '2026-04-28 16:59:43.883724'
