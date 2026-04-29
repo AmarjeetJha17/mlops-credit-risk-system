@@ -20,9 +20,19 @@ else:
     with open(REPORT_JSON_PATH, "r") as f:
         results = json.load(f)
 
-    drift_metrics = results["metrics"][0]["result"]
-    is_drifted = drift_metrics["dataset_drift"]
-    drift_share = drift_metrics["share_of_drifted_columns"]
+    # Extract data drift metric from Evidently 0.7 JSON format
+    drifted_columns = 0
+    drift_share = 0.0
+    is_drifted = False
+
+    for m in results.get("metrics", []):
+        name = m.get("metric_name", "")
+        if name.startswith("DriftedColumnsCount"):
+            val = m.get("value", {})
+            drifted_columns = int(val.get("count", 0))
+            drift_share = val.get("share", 0.0)
+            is_drifted = drift_share >= 0.5  # Adjust threshold if needed
+            break
 
     # Dashboard KPI Cards
     col1, col2, col3 = st.columns(3)

@@ -1,11 +1,11 @@
-import pandas as pd
 import json
 import os
 import requests
 import logging
 from datetime import datetime
-from evidently.report.report import Report
-from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
+import pandas as pd
+from evidently import Report
+from evidently.presets import DataDriftPreset
 
 # Set up logging
 logging.basicConfig(
@@ -51,13 +51,14 @@ def run_evidently(reference_df: pd.DataFrame, current_df: pd.DataFrame):
 
     os.makedirs("dashboard/reports", exist_ok=True)
 
-    drift_report = Report(metrics=[DataDriftPreset(), TargetDriftPreset()])
+    # Evidently 0.4+ DataDriftPreset includes dataset and column drift metrics
+    drift_report = Report(metrics=[DataDriftPreset()])
 
-    drift_report.run(reference_data=reference_df, current_data=current_df)
+    snapshot = drift_report.run(reference_data=reference_df, current_data=current_df)
 
     # Save artifacts for Streamlit
-    drift_report.save_html(REPORT_HTML_PATH)
-    drift_report.save_json(REPORT_JSON_PATH)
+    snapshot.save_html(REPORT_HTML_PATH)
+    snapshot.save_json(REPORT_JSON_PATH)
     logging.info(f"Reports saved to {REPORT_HTML_PATH} and {REPORT_JSON_PATH}")
 
 
@@ -68,11 +69,21 @@ def check_thresholds_and_alert():
     with open(REPORT_JSON_PATH, "r") as f:
         results = json.load(f)
 
-    # Extract data drift metric
-    drift_metrics = results["metrics"][0]["result"]
-    dataset_drift = drift_metrics["dataset_drift"]
-    drifted_columns = drift_metrics["number_of_drifted_columns"]
-    total_columns = drift_metrics["number_of_columns"]
+    # Extract data drift metric from Evidently 0.7.x JSON format
+    drifted_columns = 0
+    total_columns = 1
+    dataset_drift = False
+
+    for m in results.get("metrics", []):
+        name = m.get("metric_name", "")
+        if name.startswith("DriftedColumnsCount"):
+            val = m.get("value", {})
+            drifted_columns = int(val.get("count", 0))
+            share = val.get("share", 0)
+            if share > 0:
+                total_columns = int(round(drifted_columns / share))
+            dataset_drift = share >= 0.5  # Adjust threshold if needed
+            break
 
     logging.info(
         f"Drift Detected: {dataset_drift}. Drifted Columns: {drifted_columns}/{total_columns}"

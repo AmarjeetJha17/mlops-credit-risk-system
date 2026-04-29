@@ -9,7 +9,7 @@ fastapi
 uvicorn
 pydantic
 docker
-evidently==0.4.15
+evidently>=0.4.33
 streamlit
 locust
 shap
