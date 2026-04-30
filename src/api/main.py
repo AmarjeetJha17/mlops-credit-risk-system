@@ -43,6 +43,7 @@ def fix_mlflow_path(hardcoded_path: str) -> str:
         return fixed_path
     return hardcoded_path
 
+
 # Global variables to hold models in memory
 assets = {}
 
@@ -80,7 +81,9 @@ async def lifespan(app: FastAPI):
         try:
             assets["model_prod"] = mlflow.sklearn.load_model(prod_uri)
         except OSError:
-            logger.warning("Production registry path failed (Windows/Linux mismatch). Attempting local correction...")
+            logger.warning(
+                "Production registry path failed (Windows/Linux mismatch). Attempting local correction..."
+            )
             local_path = fix_mlflow_path(model_metadata.source)
             logger.info(f"Loading from corrected path: {local_path}")
             assets["model_prod"] = mlflow.sklearn.load_model(local_path)
