@@ -81,7 +81,9 @@ async def lifespan(app: FastAPI):
         try:
             assets["model_prod"] = mlflow.sklearn.load_model(prod_uri)
         except Exception:
-            logger.warning("Production registry path failed. Attempting deep resolution...")
+            logger.warning(
+                "Production registry path failed. Attempting deep resolution..."
+            )
             try:
                 # Resolve the 'models:/...' alias to its actual physical path
                 artifact_uri = client.get_model_version_download_uri(
@@ -100,7 +102,9 @@ async def lifespan(app: FastAPI):
             assets["model_staging"] = mlflow.sklearn.load_model(staging_uri)
             logger.info("Challenger (Staging) model loaded for Shadow mode.")
         except Exception:
-            logger.info("Staging registry path failed. Attempting deep resolution for Shadow...")
+            logger.info(
+                "Staging registry path failed. Attempting deep resolution for Shadow..."
+            )
             try:
                 # Get the latest version in Staging
                 staging_versions = [v for v in versions if v.current_stage == "Staging"]
