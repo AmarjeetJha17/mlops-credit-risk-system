@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
         prod_versions = [v for v in versions if v.current_stage == stage]
         if not prod_versions:
             raise RuntimeError(f"No model version found in '{stage}' stage.")
-        
+
         model_metadata = prod_versions[0]
         assets["metadata"] = {
             "version": str(model_metadata.version),
@@ -177,14 +177,16 @@ async def predict(application: LoanApplication, request: Request):
         X_final = X_transformed[assets["top_features"]]
 
         # 3. Predict with Champion
-        prod_prob = float(assets['model_prod'].predict_proba(X_final)[0, 1])
-        prediction = 1 if prod_prob > 0.15 else 0 
-        
+        prod_prob = float(assets["model_prod"].predict_proba(X_final)[0, 1])
+        prediction = 1 if prod_prob > 0.15 else 0
+
         # 4. Shadow Deployment Logging
         staging_prob = None
-        if assets.get('model_staging') is not None:
+        if assets.get("model_staging") is not None:
             try:
-                staging_prob = float(assets['model_staging'].predict_proba(X_final)[0, 1])
+                staging_prob = float(
+                    assets["model_staging"].predict_proba(X_final)[0, 1]
+                )
                 # Log both predictions for Evidently AI / Monitoring DB to pick up later
                 logger.info(
                     f"SHADOW_LOG | RequestID: {request.headers.get('X-Request-ID', 'unknown')} | "

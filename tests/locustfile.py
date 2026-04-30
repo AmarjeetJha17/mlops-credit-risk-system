@@ -1,6 +1,7 @@
 from locust import HttpUser, task, between
 import random
 
+
 class CreditRiskAPIUser(HttpUser):
     # Simulate users waiting 1 to 3 seconds between requests
     wait_time = between(1, 3)
@@ -22,11 +23,13 @@ class CreditRiskAPIUser(HttpUser):
             "NAME_CONTRACT_TYPE": random.choice(["Cash loans", "Revolving loans"]),
             "CODE_GENDER": random.choice(["M", "F"]),
             "FLAG_OWN_CAR": random.choice(["Y", "N"]),
-            "FLAG_OWN_REALTY": random.choice(["Y", "N"])
+            "FLAG_OWN_REALTY": random.choice(["Y", "N"]),
         }
-        
+
         # Post request and group it under "/predict" in the Locust UI
-        with self.client.post("/predict", json=payload, catch_response=True, name="/predict") as response:
+        with self.client.post(
+            "/predict", json=payload, catch_response=True, name="/predict"
+        ) as response:
             if response.status_code == 200:
                 response.success()
             else:

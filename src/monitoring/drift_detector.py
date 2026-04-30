@@ -32,6 +32,7 @@ def generate_simulated_data():
     else:
         logging.warning("Raw data not found. Generating synthetic data for CI/CD...")
         import numpy as np
+
         np.random.seed(42)
         n_samples = 10000
         # Create 10 features to keep drift share below 0.5 when 2 features drift
