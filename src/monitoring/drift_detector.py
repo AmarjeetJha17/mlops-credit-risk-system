@@ -26,9 +26,21 @@ def generate_simulated_data():
     """Simulates loading reference and current production data for this example."""
     logging.info("Loading dataset for monitoring simulation...")
 
-    # We will use the raw Kaggle dataset to simulate this
-    # In a real system, 'current_df' comes from the FastAPI request logs
-    df = pd.read_csv("data/raw/application_train.csv").head(10000)
+    file_path = "data/raw/application_train.csv"
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path).head(10000)
+    else:
+        logging.warning("Raw data not found. Generating synthetic data for CI/CD...")
+        import numpy as np
+        np.random.seed(42)
+        n_samples = 10000
+        # Create 10 features to keep drift share below 0.5 when 2 features drift
+        data = {"TARGET": np.random.randint(0, 2, n_samples)}
+        for i in range(1, 9):
+            data[f"FEATURE_{i}"] = np.random.normal(0, 1, n_samples)
+        data["AMT_INCOME_TOTAL"] = np.random.normal(150000, 50000, n_samples)
+        data["DAYS_EMPLOYED"] = np.random.normal(-2000, 1000, n_samples)
+        df = pd.DataFrame(data)
 
     # Split into reference (past) and current (recent production)
     reference_df = df.iloc[:5000].copy()
