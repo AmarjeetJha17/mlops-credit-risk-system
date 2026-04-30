@@ -45,52 +45,45 @@ async def lifespan(app: FastAPI):
         assets["pipeline"] = joblib.load("models/preprocessing_pipeline.joblib")
         assets["top_features"] = joblib.load("models/top_features.joblib")
 
-        # Load MLflow Model
+        # Load MLflow Metadata
         client = MlflowClient()
-        # Fetch metadata for the /metrics endpoint (using modern API)
         versions = client.search_model_versions(f"name='{model_name}'")
         prod_versions = [v for v in versions if v.current_stage == stage]
         if not prod_versions:
             raise RuntimeError(f"No model version found in '{stage}' stage.")
-        model_metadata = client.get_latest_versions(model_name, stages=[stage])[0]
+        
+        model_metadata = prod_versions[0]
         assets["metadata"] = {
-            "version": str(model_metadata.version),  # <--- FIX: Cast integer to string
+            "version": str(model_metadata.version),
             "roc_auc": model_metadata.tags.get("roc_auc", "unknown"),
             "training_date": model_metadata.tags.get("training_date", "unknown"),
         }
 
-        # Load the underlying scikit-learn/LightGBM model (better for SHAP support)
-        model_uri = f"models:/{model_name}/{stage}"
+        # 1. Load Production (Champion) Model
+        prod_uri = f"models:/{model_name}/Production"
         try:
-            assets["model"] = mlflow.sklearn.load_model(model_uri)
+            assets["model_prod"] = mlflow.sklearn.load_model(prod_uri)
         except OSError:
-            # In Docker, the MLflow DB may contain hardcoded Windows artifact paths
-            # that don't resolve on Linux. Catch the OSError and load from the local path.
-            logger.info(
-                "Registry path failed (likely hardcoded). Attempting local artifact fallback..."
-            )
-            # The model source in the registry is like "models:/m-<hash>"
-            # which maps to mlruns/<exp_id>/models/<model_hash>/artifacts/
-            model_source = model_metadata.source
-            run_id = model_metadata.run_id
-            # Get experiment_id from the run
-            run_info = client.get_run(run_id)
-            exp_id = run_info.info.experiment_id
-            # Extract model hash from source (format: "models:/m-<hash>")
-            model_hash = model_source.split("/")[-1]
-            local_model_path = f"mlruns/{exp_id}/models/{model_hash}/artifacts"
-            logger.info(f"Loading model from local path: {local_model_path}")
-            assets["model"] = mlflow.sklearn.load_model(local_model_path)
+            logger.info("Production registry path failed. Attempting local fallback...")
+            assets["model_prod"] = mlflow.sklearn.load_model(model_metadata.source)
 
-        # Initialize SHAP explainer
-        logger.info("Initializing SHAP explainer...")
-        assets["explainer"] = shap.TreeExplainer(assets["model"])
+        # 2. Load Staging (Challenger) for Shadow Deployment
+        try:
+            staging_uri = f"models:/{model_name}/Staging"
+            assets["model_staging"] = mlflow.sklearn.load_model(staging_uri)
+            logger.info("Challenger (Staging) model loaded for Shadow mode.")
+        except Exception:
+            logger.warning("No Staging model found. Shadow deployment disabled.")
+            assets["model_staging"] = None
 
-        logger.info(f"Model V{model_metadata.version} loaded successfully!")
+        # 3. Initialize SHAP explainer on Production model
+        logger.info("Initializing SHAP explainer on Champion model...")
+        assets["explainer"] = shap.TreeExplainer(assets["model_prod"])
+
+        logger.info(f"Model V{model_metadata.version} and shadow assets initialized.")
 
     except Exception as e:
         logger.error(f"Failed to load assets: {e}")
-        # In a real system, you might load a local fallback model here
         raise RuntimeError("Could not load production model. API cannot start.")
 
     yield  # API is running
@@ -147,7 +140,7 @@ async def get_metrics():
 
 
 @app.post("/predict", response_model=PredictionResponse, tags=["Inference"])
-async def predict(application: LoanApplication):
+async def predict(application: LoanApplication, request: Request):
     """Processes a loan application and returns a default probability."""
     try:
         # 1. Convert Pydantic payload to DataFrame
@@ -183,12 +176,24 @@ async def predict(application: LoanApplication):
         # Filter down to top features
         X_final = X_transformed[assets["top_features"]]
 
-        # 3. Predict
-        probability = float(assets["model"].predict_proba(X_final)[0, 1])
-        # Threshold tuning: 0.5 is default, but banks might use 0.15 depending on cost matrix
-        prediction = 1 if probability > 0.15 else 0
+        # 3. Predict with Champion
+        prod_prob = float(assets['model_prod'].predict_proba(X_final)[0, 1])
+        prediction = 1 if prod_prob > 0.15 else 0 
+        
+        # 4. Shadow Deployment Logging
+        staging_prob = None
+        if assets.get('model_staging') is not None:
+            try:
+                staging_prob = float(assets['model_staging'].predict_proba(X_final)[0, 1])
+                # Log both predictions for Evidently AI / Monitoring DB to pick up later
+                logger.info(
+                    f"SHADOW_LOG | RequestID: {request.headers.get('X-Request-ID', 'unknown')} | "
+                    f"Champion_Prob: {prod_prob:.4f} | Challenger_Prob: {staging_prob:.4f}"
+                )
+            except Exception as e:
+                logger.error(f"Shadow prediction failed: {e}")
 
-        # 4. Calculate local SHAP explainability
+        # 5. Calculate local SHAP explainability
         shap_values = assets["explainer"].shap_values(X_final)
         shap_target = shap_values[1] if isinstance(shap_values, list) else shap_values
 
@@ -203,7 +208,7 @@ async def predict(application: LoanApplication):
         # 5. Return Response
         return PredictionResponse(
             prediction=prediction,
-            probability=probability,
+            probability=prod_prob,
             feature_contributions=sorted_contributions,
             model_version=assets["metadata"]["version"],
         )
