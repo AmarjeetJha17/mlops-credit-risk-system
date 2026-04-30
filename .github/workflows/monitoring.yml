@@ -1,6 +1,8 @@
 name: Production Data Drift Monitoring
 
 on:
+  push:
+    branches: [master]
   schedule:
     - cron: "0 0 * * *" # Runs daily at midnight UTC
   workflow_dispatch:
