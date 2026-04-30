@@ -80,13 +80,19 @@ async def lifespan(app: FastAPI):
         prod_uri = f"models:/{model_name}/Production"
         try:
             assets["model_prod"] = mlflow.sklearn.load_model(prod_uri)
-        except OSError:
-            logger.warning(
-                "Production registry path failed (Windows/Linux mismatch). Attempting local correction..."
-            )
-            local_path = fix_mlflow_path(model_metadata.source)
-            logger.info(f"Loading from corrected path: {local_path}")
-            assets["model_prod"] = mlflow.sklearn.load_model(local_path)
+        except Exception:
+            logger.warning("Production registry path failed. Attempting deep resolution...")
+            try:
+                # Resolve the 'models:/...' alias to its actual physical path
+                artifact_uri = client.get_model_version_download_uri(
+                    model_name, model_metadata.version
+                )
+                local_path = fix_mlflow_path(artifact_uri)
+                logger.info(f"Resolved Champion to corrected path: {local_path}")
+                assets["model_prod"] = mlflow.sklearn.load_model(local_path)
+            except Exception as e:
+                logger.error(f"Deep resolution for Production failed: {e}")
+                raise e
 
         # 2. Load Staging (Challenger) for Shadow Deployment
         try:
@@ -94,8 +100,23 @@ async def lifespan(app: FastAPI):
             assets["model_staging"] = mlflow.sklearn.load_model(staging_uri)
             logger.info("Challenger (Staging) model loaded for Shadow mode.")
         except Exception:
-            logger.warning("No Staging model found. Shadow deployment disabled.")
-            assets["model_staging"] = None
+            logger.info("Staging registry path failed. Attempting deep resolution for Shadow...")
+            try:
+                # Get the latest version in Staging
+                staging_versions = [v for v in versions if v.current_stage == "Staging"]
+                if staging_versions:
+                    v_staging = staging_versions[0]
+                    artifact_uri = client.get_model_version_download_uri(
+                        model_name, v_staging.version
+                    )
+                    local_path = fix_mlflow_path(artifact_uri)
+                    logger.info(f"Resolved Staging to corrected path: {local_path}")
+                    assets["model_staging"] = mlflow.sklearn.load_model(local_path)
+                else:
+                    assets["model_staging"] = None
+            except Exception as e:
+                logger.warning(f"Shadow deployment resolution failed: {e}")
+                assets["model_staging"] = None
 
         # 3. Initialize SHAP explainer on Production model
         logger.info("Initializing SHAP explainer on Champion model...")
