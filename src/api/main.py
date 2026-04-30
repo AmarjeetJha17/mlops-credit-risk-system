@@ -55,9 +55,9 @@ async def lifespan(app: FastAPI):
 
     tracking_uri = os.getenv("AZURE_ML_MLFLOW_URI")
     if not tracking_uri:
-        raise ValueError("AZURE_ML_MLFLOW_URI environment variable not set.")    
+        raise ValueError("AZURE_ML_MLFLOW_URI environment variable not set.")
     mlflow.set_tracking_uri(tracking_uri)
-    
+
     model_name = "CreditRiskModel"
     stage = "Production"
 
