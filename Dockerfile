@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Builder
 # ==========================================
-FROM python:3.10-slim as builder
+FROM python:3.11-slim as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ==========================================
 # Stage 2: Production Runner
 # ==========================================
-FROM python:3.10-slim as runner
+FROM python:3.11-slim as runner
 
 # LightGBM requires libgomp1 on Debian-based slim systems
 RUN apt-get update && apt-get install -y --no-install-recommends \
