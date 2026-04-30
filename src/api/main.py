@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import uuid
@@ -38,7 +39,6 @@ def fix_mlflow_path(hardcoded_path: str) -> str:
         return hardcoded_path
     if "mlruns" in hardcoded_path:
         parts = hardcoded_path.split("mlruns")
-        # Ensure we use forward slashes for Linux
         fixed_path = "mlruns" + parts[-1].replace("\\", "/")
         return fixed_path
     return hardcoded_path
@@ -53,7 +53,11 @@ async def lifespan(app: FastAPI):
     """Loads the production model, pipeline, and features on startup."""
     logger.info("Initializing API and loading model assets...")
 
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    tracking_uri = os.getenv("AZURE_ML_MLFLOW_URI")
+    if not tracking_uri:
+        raise ValueError("AZURE_ML_MLFLOW_URI environment variable not set.")    
+    mlflow.set_tracking_uri(tracking_uri)
+    
     model_name = "CreditRiskModel"
     stage = "Production"
 

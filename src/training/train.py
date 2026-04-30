@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
 import joblib
 import logging
 import matplotlib.pyplot as plt
@@ -9,6 +10,12 @@ import mlflow
 import mlflow.sklearn
 import mlflow.xgboost
 import mlflow.lightgbm
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Add src/ to path so pickled pipeline can resolve the 'features' module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -32,8 +39,11 @@ PIPELINE_PATH = "models/preprocessing_pipeline.joblib"
 TOP_FEATURES_PATH = "models/top_features.joblib"
 ARTIFACTS_DIR = "reports/figures"
 
-# 1. Initialize MLflow with SQLite backend
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
+# 1. Initialize MLflow with Azure ML backend
+tracking_uri = os.getenv("AZURE_ML_MLFLOW_URI")
+if not tracking_uri:
+    raise ValueError("AZURE_ML_MLFLOW_URI environment variable not set.")    
+mlflow.set_tracking_uri(tracking_uri)
 mlflow.set_experiment("credit-risk-baselines")
 
 
