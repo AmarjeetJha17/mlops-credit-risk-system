@@ -51,7 +51,8 @@ COPY src/features/ /app/src/features/
 COPY models/ /app/models/
 
 # Copy environment config for Azure ML tracking URI
-COPY .env /app/.env
+#COPY .env /app/.env
+# .env.example (do not put real secrets here)
 
 # Expose the API port
 EXPOSE 8000
