@@ -11,12 +11,6 @@ import mlflow.sklearn
 import mlflow.xgboost
 import mlflow.lightgbm
 from dotenv import load_dotenv
-
-load_dotenv()
-
-# Add src/ to path so pickled pipeline can resolve the 'features' module
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -29,6 +23,11 @@ from sklearn.metrics import (
 from sklearn.model_selection import TimeSeriesSplit
 import lightgbm as lgb
 import xgboost as xgb
+
+load_dotenv()
+
+# Add src/ to path so pickled pipeline can resolve the 'features' module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
