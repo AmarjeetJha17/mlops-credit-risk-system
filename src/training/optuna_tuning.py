@@ -1,6 +1,8 @@
 import optuna
 import mlflow
 import os
+from dotenv import load_dotenv
+import sys
 import logging
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -9,6 +11,11 @@ import lightgbm as lgb
 from train import load_and_prepare_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
+load_dotenv()
+
+# Add src/ to path so pickled pipeline can resolve the 'features' module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 tracking_uri = os.getenv("AZURE_ML_MLFLOW_URI")
 if not tracking_uri:

@@ -1,8 +1,15 @@
 import mlflow
 import os
+from dotenv import load_dotenv
 import logging
 from mlflow.tracking import MlflowClient
 from datetime import datetime
+import sys
+
+load_dotenv()
+
+# Add src/ to path so pickled pipeline can resolve the 'features' module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -25,10 +32,23 @@ def get_best_run(client: MlflowClient, experiment_name: str):
 
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id],
-        order_by=["metrics.cv_mean_roc_auc DESC"],
-        max_results=1,
+        max_results=50,
     )
-    return runs[0] if runs else None
+
+    # Filter to only FINISHED runs that have the AUC metric
+    finished_runs = [
+        r
+        for r in runs
+        if r.info.status == "FINISHED"
+        and r.data.metrics.get("cv_mean_roc_auc") is not None
+    ]
+
+    if not finished_runs:
+        return None
+
+    # Sort client-side by AUC descending
+    finished_runs.sort(key=lambda r: r.data.metrics["cv_mean_roc_auc"], reverse=True)
+    return finished_runs[0]
 
 
 def validate_and_promote():

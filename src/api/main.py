@@ -4,6 +4,7 @@ import time
 import uuid
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
 
 import pandas as pd
 import numpy as np
@@ -15,12 +16,13 @@ import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 from fastapi import FastAPI, HTTPException, Request
 from contextlib import asynccontextmanager
+from src.api.schemas import LoanApplication, PredictionResponse, MetricsResponse
+
+load_dotenv()
 
 # Add 'src/' to Python path so joblib can find the 'features' module
 # when unpickling the preprocessing pipeline's custom transformers.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from src.api.schemas import LoanApplication, PredictionResponse, MetricsResponse
 
 # Configure Logging
 logging.basicConfig(
