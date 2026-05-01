@@ -47,10 +47,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY src/api/ /app/src/api/
 COPY src/features/ /app/src/features/
 
-# Copy MLflow tracking database and model artifacts (Our "Free" Registry)
-COPY mlflow.db /app/mlflow.db
-COPY mlruns/ /app/mlruns/
+# Copy preprocessing artifacts (pipeline and top features)
 COPY models/ /app/models/
+
+# Copy environment config for Azure ML tracking URI
+COPY .env /app/.env
 
 # Expose the API port
 EXPOSE 8000

@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ "master" ]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: amarjeetjha17/mlops-credit-risk-system
-
 jobs:
   test:
     name: Lint & Test
@@ -43,7 +39,7 @@ jobs:
     name: Build & Push to Azure ACR
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout Repository
@@ -68,7 +64,7 @@ jobs:
     name: Deploy to Azure Web App
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     steps:
       - name: Deploy to Azure Web App

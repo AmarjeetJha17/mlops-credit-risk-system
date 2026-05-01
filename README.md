@@ -4,7 +4,7 @@
 
 [![CI/CD Pipeline](https://github.com/AmarjeetJha17/mlops-credit-risk-system/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/AmarjeetJha17/mlops-credit-risk-system/actions/workflows/ci-cd.yml)
 [![Drift Monitoring](https://github.com/AmarjeetJha17/mlops-credit-risk-system/actions/workflows/monitoring.yml/badge.svg)](https://github.com/AmarjeetJha17/mlops-credit-risk-system/actions/workflows/monitoring.yml)
-[![Live API](https://img.shields.io/badge/API-Live%20on%20Render-brightgreen)](https://credit-risk-api-0cxh.onrender.com/docs)
+[![Live API](https://img.shields.io/badge/API-Live%20on%20Azure-0078D4)](https://app-credit-risk-api-1777604735.azurewebsites.net/docs)
 [![Dashboard](https://img.shields.io/badge/Dashboard-Streamlit%20Cloud-ff4b4b)](https://mlops-credit-risk-system.streamlit.app)
 
 ---
@@ -50,11 +50,11 @@ The system answers a single business question: **"Will this loan applicant defau
 | Category | Capability |
 |---|---|
 | **Feature Engineering** | Custom scikit-learn transformers generating domain-specific financial ratios (debt-to-income, credit utilization, employment stability) |
-| **Experiment Tracking** | MLflow with SQLite backend tracking 4 model baselines (Logistic Regression, Random Forest, LightGBM, XGBoost) across cross-validation folds |
+| **Experiment Tracking** | MLflow integrated with Azure ML workspace tracking 4 model baselines (Logistic Regression, Random Forest, LightGBM, XGBoost) across cross-validation folds |
 | **Hyperparameter Tuning** | Optuna Bayesian optimization with TimeSeriesSplit to prevent data leakage |
 | **Explainability** | Real-time SHAP values on every prediction — top 5 contributing features returned in the API response |
 | **Shadow Deployment** | Champion (Production) and Challenger (Staging) models loaded concurrently; shadow predictions logged for comparison without affecting users |
-| **CI/CD** | GitHub Actions → Ruff lint → Pytest → Docker build → GHCR push → Render deploy webhook |
+| **CI/CD** | GitHub Actions → Ruff lint → Pytest → Docker build → Azure ACR push → Azure Web App deploy |
 | **Monitoring** | Evidently AI data drift detection running on a scheduled GitHub Actions workflow |
 | **Dashboard** | Streamlit Cloud dashboard displaying drift KPIs and interactive Evidently reports |
 
@@ -66,14 +66,14 @@ The system answers a single business question: **"Will this loan applicant defau
 |---|---|
 | **Language** | Python 3.11 |
 | **ML Models** | LightGBM, XGBoost, Scikit-learn |
-| **Experiment Tracking** | MLflow (SQLite backend) |
+| **Experiment Tracking** | MLflow (Azure ML backend) |
 | **Hyperparameter Tuning** | Optuna |
 | **Explainability** | SHAP |
 | **API Framework** | FastAPI + Pydantic v2 |
 | **Containerization** | Docker (multi-stage build) |
 | **CI/CD** | GitHub Actions |
-| **Container Registry** | GitHub Container Registry (GHCR) |
-| **Cloud Deployment** | Render.com (free tier) |
+| **Container Registry** | Azure Container Registry (ACR) |
+| **Cloud Deployment** | Azure App Service |
 | **Monitoring** | Evidently AI |
 | **Dashboard** | Streamlit |
 | **Load Testing** | Locust |
@@ -97,7 +97,7 @@ mlops-credit-risk-system/
 ├── models/
 │   ├── preprocessing_pipeline.joblib
 │   └── top_features.joblib
-├── mlruns/                       # MLflow experiment artifacts
+├── mlruns/                       # MLflow local experiment artifacts (legacy)
 ├── notebooks/
 │   └── eda.py                    # Exploratory data analysis
 ├── reports/figures/              # SHAP plots, confusion matrices
@@ -123,8 +123,8 @@ mlops-credit-risk-system/
 ├── Dockerfile                    # Multi-stage production build
 ├── docker-compose.yml            # Full stack (API + MLflow + Monitoring)
 ├── Makefile                      # Convenience commands
-├── render.yaml                   # Render.com Blueprint spec
-├── mlflow.db                     # MLflow tracking database
+├── .env                          # Azure ML tracking URI (not committed)
+├── mlflow.db                     # MLflow local tracking database (legacy)
 └── requirements.txt              # Full project dependencies
 ```
 
@@ -136,7 +136,9 @@ mlops-credit-risk-system/
 
 - **Python 3.11+**
 - **Docker** (optional, for containerized deployment)
+- **Azure CLI** (logged in with `az login` for Azure ML access)
 - **Kaggle Dataset**: Download `application_train.csv` from [Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) and place it in `data/raw/`
+- **`.env` file** with `AZURE_ML_MLFLOW_URI` set to your Azure ML MLflow tracking URI
 
 ### Local Development
 
@@ -168,8 +170,8 @@ python src/training/register_model.py
 # Start the API server
 uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 
-# (In a separate terminal) Start the MLflow UI
-mlflow ui --backend-store-uri sqlite:///mlflow.db
+# View experiments in Azure ML Studio
+# Navigate to: https://ml.azure.com → Your Workspace → Experiments
 ```
 
 ### Docker
@@ -258,13 +260,14 @@ SHADOW_LOG | RequestID: abc123 | Champion_Prob: 0.0823 | Challenger_Prob: 0.0915
 Every push to `master` triggers a fully automated pipeline:
 
 ```
-Ruff Lint → Pytest → Docker Build → Push to GHCR → Deploy to Render
+Ruff Lint → Pytest → Docker Build → Push to Azure ACR → Deploy to Azure Web App
 ```
 
 - **Linting**: Ruff enforces code quality and formatting standards
 - **Testing**: Pytest validates feature engineering outputs and model assumptions
 - **Build**: Multi-stage Docker image minimizes production footprint
-- **Deploy**: Render.com pulls the latest image via a deploy webhook
+- **Registry**: Image pushed to Azure Container Registry (ACR)
+- **Deploy**: Azure Web App pulls and deploys the latest container image
 
 ### 4. Production Monitoring
 
@@ -278,10 +281,9 @@ Ruff Lint → Pytest → Docker Build → Push to GHCR → Deploy to Render
 
 | Service | URL |
 |---|---|
-| **Production API** | [credit-risk-api-0cxh.onrender.com](https://credit-risk-api-0cxh.onrender.com/docs) |
+| **Production API** | [app-credit-risk-api-1777604735.azurewebsites.net](https://app-credit-risk-api-1777604735.azurewebsites.net/docs) |
+| **Azure ML Studio** | [ml.azure.com](https://ml.azure.com) — Experiment tracking, model registry, and monitoring |
 | **Monitoring Dashboard** | [mlops-credit-risk-system.streamlit.app](https://mlops-credit-risk-system.streamlit.app) |
-
-> **Note**: The Render free tier spins down after inactivity. The first request may take ~50 seconds to cold-start.
 
 ---
 
